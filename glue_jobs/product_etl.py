@@ -6,7 +6,7 @@ from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.sql.functions import col, current_timestamp, lit
 from pyspark.sql.types import StructType, StructField, StringType
-from delta.tables import DeltaTable
+from delta import DeltaTable
 
 args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key", "dataset_name"])
 RAW_KEY = args["raw_key"]
