@@ -1,5 +1,5 @@
 {
-  "Comment": "Lakehouse Pipeline with Marker Checks, Conditional ETL, Lambda-based Crawler, and Athena Validation",
+  "Comment": "Lakehouse Pipeline with Marker Checks, Delta Module, Conditional ETL, Lambda-based Crawler, and Athena Validation",
   "StartAt": "Simulate File Detection",
   "States": {
     "Simulate File Detection": {
@@ -7,6 +7,7 @@
       "Result": "New file detected (simulated)",
       "Next": "Check Products Marker"
     },
+
     "Check Products Marker": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -22,6 +23,7 @@
       },
       "Next": "Products Already Processed?"
     },
+
     "Products Already Processed?": {
       "Type": "Choice",
       "Choices": [
@@ -33,32 +35,33 @@
       ],
       "Default": "Run Products ETL"
     },
+
     "Run Products ETL": {
       "Type": "Task",
       "Resource": "arn:aws:states:::glue:startJobRun.sync",
       "Parameters": {
-        "JobName": "product_etl"
+        "JobName": "product_etl",
+        "Arguments": {
+          "--additional-python-modules": "delta-spark"
+        }
       },
       "Next": "Check Orders Marker",
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
-          "BackoffRate": 2
+          "BackoffRate": 2.0
         }
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
     },
+
     "Check Orders Marker": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -74,6 +77,7 @@
       },
       "Next": "Orders Already Processed?"
     },
+
     "Orders Already Processed?": {
       "Type": "Choice",
       "Choices": [
@@ -85,32 +89,33 @@
       ],
       "Default": "Run Orders ETL"
     },
+
     "Run Orders ETL": {
       "Type": "Task",
       "Resource": "arn:aws:states:::glue:startJobRun.sync",
       "Parameters": {
-        "JobName": "orders_etl"
+        "JobName": "orders_etl",
+        "Arguments": {
+          "--additional-python-modules": "delta-spark"
+        }
       },
       "Next": "Check Order Items Marker",
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
-          "BackoffRate": 2
+          "BackoffRate": 2.0
         }
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
     },
+
     "Check Order Items Marker": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -126,6 +131,7 @@
       },
       "Next": "Order Items Already Processed?"
     },
+
     "Order Items Already Processed?": {
       "Type": "Choice",
       "Choices": [
@@ -137,32 +143,33 @@
       ],
       "Default": "Run Order Items ETL"
     },
+
     "Run Order Items ETL": {
       "Type": "Task",
       "Resource": "arn:aws:states:::glue:startJobRun.sync",
       "Parameters": {
-        "JobName": "order_items_etl"
+        "JobName": "order_items_etl",
+        "Arguments": {
+          "--additional-python-modules": "delta-spark"
+        }
       },
       "Next": "Run Glue Crawler",
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
-          "BackoffRate": 2
+          "BackoffRate": 2.0
         }
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
     },
+
     "Run Glue Crawler": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -172,6 +179,7 @@
       },
       "Next": "Run Athena Validation"
     },
+
     "Run Athena Validation": {
       "Type": "Task",
       "Resource": "arn:aws:states:::athena:startQueryExecution.sync",
@@ -186,6 +194,7 @@
       },
       "End": true
     },
+
     "Send Failure Notification": {
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
@@ -196,6 +205,7 @@
       },
       "Next": "FailState"
     },
+
     "FailState": {
       "Type": "Fail",
       "Error": "ETLPipelineFailed",
