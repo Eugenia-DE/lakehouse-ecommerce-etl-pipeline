@@ -19,7 +19,7 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(JOB_NAME, args)
 
-# S3 paths
+# Paths
 bucket = "ecommerce-lakehouse-project"
 RAW_PATH = f"s3://{bucket}/{RAW_KEY}"
 PROCESSED_PATH = f"s3://{bucket}/processed/{DATASET}/"
@@ -28,7 +28,7 @@ ARCHIVE_PATH = f"s3://{bucket}/archived/{RAW_KEY}"
 DATABASE_NAME = "ecommerce_lakehouse"
 TABLE_NAME = DATASET
 
-# Schema definition 
+# Schema definition (for products)
 schema = StructType([
     StructField("product_id", StringType(), True),
     StructField("department_id", StringType(), True),
@@ -36,7 +36,7 @@ schema = StructType([
     StructField("product_name", StringType(), True)
 ])
 
-# Read data
+# Read raw data
 df_raw = spark.read.format("csv") \
     .option("header", "true") \
     .schema(schema) \
@@ -50,21 +50,34 @@ df_invalid = df_raw.subtract(df_valid)
 # Deduplication
 df_clean = df_valid.dropDuplicates(["product_id"])
 
-# Metadata column
+# Add metadata
 df_clean = df_clean.withColumn("ingestion_timestamp", current_timestamp())
 
-# Write invalids
+# Write invalid Rows
 if df_invalid.count() > 0:
     df_invalid.withColumn("rejection_reason", lit("Missing required fields")) \
         .write.mode("overwrite").option("header", "true") \
         .csv(REJECTED_PATH)
 
+# Delta Lake Merge (Upsert)
+if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
+    delta_table = DeltaTable.forPath(spark, PROCESSED_PATH)
 
-# Write clean data to Delta
-df_clean.write.format("delta").mode("overwrite").save(PROCESSED_PATH)
+    delta_table.alias("target").merge(
+        df_clean.alias("source"),
+        "target.product_id = source.product_id"
+    ).whenMatchedUpdateAll() \
+     .whenNotMatchedInsertAll() \
+     .execute()
+else:
+    df_clean.write.format("delta") \
+        .partitionBy("department") \
+        .mode("overwrite") \
+        .save(PROCESSED_PATH)
 
 # Glue catalog registration
 spark.sql(f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
+
 spark.sql(f"""
     CREATE TABLE IF NOT EXISTS {DATABASE_NAME}.{TABLE_NAME}
     USING DELTA
