@@ -8,7 +8,7 @@ from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.sql.functions import col, current_timestamp, to_date
-from delta.tables import DeltaTable
+from delta import DeltaTable
 
 # Glue Initialization
 args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key"])
