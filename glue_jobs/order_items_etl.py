@@ -11,7 +11,9 @@ from delta import DeltaTable
 
 
 def main():
-    args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key", "dataset_name"])
+    args = getResolvedOptions(
+        sys.argv, ["JOB_NAME", "raw_key", "dataset_name"]
+    )
     RAW_KEY = args["raw_key"]
     JOB_NAME = args["JOB_NAME"]
     DATASET = args["dataset_name"]
@@ -57,7 +59,8 @@ def main():
 
     required_columns = [
         "id", "order_id", "user_id", "days_since_prior_order",
-        "product_id", "add_to_cart_order", "reordered", "order_timestamp"
+        "product_id", "add_to_cart_order", "reordered",
+        "order_timestamp"
     ]
     valid_rows, invalid_rows = [], []
 
@@ -68,7 +71,8 @@ def main():
             df = df[required_columns + ["date"]]
             valid = df.dropna(
                 subset=[
-                    "id", "order_id", "product_id", "user_id", "order_timestamp"
+                    "id", "order_id", "product_id",
+                    "user_id", "order_timestamp"
                 ]
             )
             invalid = df[~df.index.isin(valid.index)]
@@ -95,7 +99,10 @@ def main():
     if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
         DeltaTable.forPath(spark, PROCESSED_PATH) \
             .alias("target") \
-            .merge(spark_df.alias("source"), "target.id = source.id") \
+            .merge(
+                spark_df.alias("source"),
+                "target.id = source.id"
+            ) \
             .whenMatchedUpdateAll() \
             .whenNotMatchedInsertAll() \
             .execute()
