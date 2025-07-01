@@ -24,15 +24,18 @@ def main():
     TABLE_NAME = DATASET
 
     sc = SparkContext()
-    glueContext = GlueContext(sc)
-    spark = glueContext.spark_session.builder \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+    glue_context = GlueContext(sc)
+    spark = glue_context.spark_session.builder \
+        .config(
+            "spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension"
+        ) \
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog"
         ) \
         .getOrCreate()
-    job = Job(glueContext)
+    job = Job(glue_context)
     job.init(JOB_NAME, args)
 
     s3 = boto3.client("s3")
@@ -49,7 +52,9 @@ def main():
     for sheet in excel_file.sheet_names:
         try:
             df = excel_file.parse(sheet)
-            df["date"] = pd.to_datetime(df["order_timestamp"]).dt.date
+            df["date"] = pd.to_datetime(
+                df["order_timestamp"]
+            ).dt.date
             df = df[required_columns + ["date"]]
             valid = df.dropna(
                 subset=["order_id", "user_id", "order_timestamp"]
