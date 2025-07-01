@@ -26,8 +26,10 @@ def main():
     sc = SparkContext()
     glue_context = GlueContext(sc)
     spark = glue_context.spark_session.builder \
-        .config("spark.sql.extensions", 
-                "io.delta.sql.DeltaSparkSessionExtension") \
+        .config(
+            "spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension"
+        ) \
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog"
@@ -50,9 +52,7 @@ def main():
     for sheet in excel_file.sheet_names:
         try:
             df = excel_file.parse(sheet)
-            df["date"] = pd.to_datetime(
-                df["order_timestamp"]
-            ).dt.date
+            df["date"] = pd.to_datetime(df["order_timestamp"]).dt.date
             df = df[required_columns + ["date"]]
             valid = df.dropna(
                 subset=["order_id", "user_id", "order_timestamp"]
@@ -73,8 +73,7 @@ def main():
 
     spark_df = spark_df.dropDuplicates(["order_id"]) \
         .withColumn("ingestion_timestamp", current_timestamp()) \
-        .withColumn("order_timestamp", 
-                   col("order_timestamp").cast("timestamp")) \
+        .withColumn("order_timestamp", col("order_timestamp").cast("timestamp")) \
         .withColumn("date", to_date(col("order_timestamp")))
 
     if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
