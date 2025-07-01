@@ -1,14 +1,13 @@
 import sys
-import boto3
-import os
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, current_timestamp, lit
+from pyspark.sql.functions import current_timestamp, lit
 from pyspark.sql.types import StructType, StructField, StringType
 from delta import DeltaTable
+
 
 def main():
     args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key", "dataset_name"])
@@ -32,8 +31,6 @@ def main():
     DATABASE_NAME = "ecommerce_lakehouse"
     TABLE_NAME = DATASET
 
-    s3 = boto3.client("s3")
-
     schema = StructType([
         StructField("product_id", StringType(), True),
         StructField("department_id", StringType(), True),
@@ -49,18 +46,23 @@ def main():
     required_fields = ["product_id", "department_id", "department", "product_name"]
     df_valid = df_raw.dropna(subset=required_fields)
     df_invalid = df_raw.subtract(df_valid)
+
     df_clean = df_valid.dropDuplicates(["product_id"]) \
         .withColumn("ingestion_timestamp", current_timestamp())
 
     if df_invalid.count() > 0:
         df_invalid.withColumn("rejection_reason", lit("Missing required fields")) \
-            .write.mode("overwrite").option("header", "true") \
+            .write.mode("overwrite") \
+            .option("header", "true") \
             .csv(REJECTED_PATH)
 
     if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
         DeltaTable.forPath(spark, PROCESSED_PATH) \
             .alias("target") \
-            .merge(df_clean.alias("source"), "target.product_id = source.product_id") \
+            .merge(
+                df_clean.alias("source"),
+                "target.product_id = source.product_id"
+            ) \
             .whenMatchedUpdateAll() \
             .whenNotMatchedInsertAll() \
             .execute()
@@ -77,7 +79,8 @@ def main():
         LOCATION '{PROCESSED_PATH}'
     """)
 
-    print(f" Finished processing {RAW_KEY}")
+    print(f"Finished processing {RAW_KEY}")
     job.commit()
+
 
 main()
