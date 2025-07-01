@@ -23,4 +23,4 @@ jobs:
         run: pip install flake8
 
       - name: Run flake8 linting
-        run: flake8 product_etl.py orders_etl.py order_items_etl.py archive_and_mark_processed.py
+        run: flake8 glue_jobs/
