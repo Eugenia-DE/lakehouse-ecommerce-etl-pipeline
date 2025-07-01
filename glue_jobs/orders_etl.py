@@ -73,7 +73,10 @@ def main():
 
     spark_df = spark_df.dropDuplicates(["order_id"]) \
         .withColumn("ingestion_timestamp", current_timestamp()) \
-        .withColumn("order_timestamp", col("order_timestamp").cast("timestamp")) \
+        .withColumn(
+            "order_timestamp",
+            col("order_timestamp").cast("timestamp")
+        ) \
         .withColumn("date", to_date(col("order_timestamp")))
 
     if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
