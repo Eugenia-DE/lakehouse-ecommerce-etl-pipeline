@@ -1,5 +1,4 @@
 import sys
-import os
 import pandas as pd
 import boto3
 import io
@@ -10,6 +9,7 @@ from awsglue.job import Job
 from pyspark.sql.functions import col, current_timestamp, to_date
 from delta import DeltaTable
 
+
 def main():
     args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key", "dataset_name"])
     RAW_KEY = args["raw_key"]
@@ -17,9 +17,7 @@ def main():
     DATASET = args["dataset_name"]
 
     BUCKET = "ecommerce-lakehouse-project"
-    RAW_PATH = f"s3://{BUCKET}/{RAW_KEY}"
     PROCESSED_PATH = f"s3://{BUCKET}/processed/{DATASET}/"
-    REJECTED_PATH = f"{PROCESSED_PATH}/rejected_records/"
     DATABASE_NAME = "ecommerce_lakehouse"
     TABLE_NAME = DATASET
     ORDERS_PATH = f"s3://{BUCKET}/processed/orders/"
@@ -39,11 +37,10 @@ def main():
         orders_df = spark.read.format("delta").load(ORDERS_PATH)
         valid_order_ids = orders_df.select("order_id").distinct()
     except Exception as e:
-        print(" Failed to load FK orders table:", str(e))
+        print("Failed to load FK orders table:", str(e))
         job.commit()
         return
-    
-    # Load foreign key (products) data
+
     try:
         products_df = spark.read.format("delta").load(f"s3://{BUCKET}/processed/products/")
         valid_product_ids = products_df.select("product_id").distinct()
@@ -67,7 +64,9 @@ def main():
             df = excel_file.parse(sheet)
             df["date"] = pd.to_datetime(df["order_timestamp"]).dt.date
             df = df[required_columns + ["date"]]
-            valid = df.dropna(subset=["id", "order_id", "product_id", "user_id", "order_timestamp"])
+            valid = df.dropna(
+                subset=["id", "order_id", "product_id", "user_id", "order_timestamp"]
+            )
             invalid = df[~df.index.isin(valid.index)]
             valid_rows.append(valid)
             invalid_rows.append(invalid)
@@ -75,12 +74,11 @@ def main():
             print(f"Skipping sheet {sheet} due to error: {e}")
 
     if not valid_rows:
-        print(" No valid data found.")
+        print("No valid data found.")
         job.commit()
         return
 
     df_valid = pd.concat(valid_rows, ignore_index=True)
-    df_invalid = pd.concat(invalid_rows, ignore_index=True)
     spark_df = spark.createDataFrame(df_valid)
 
     spark_df = spark_df.join(valid_order_ids, on="order_id", how="leftsemi")
@@ -110,7 +108,8 @@ def main():
         LOCATION '{PROCESSED_PATH}'
     """)
 
-    print(f" Finished processing {RAW_KEY}")
+    print(f"Finished processing {RAW_KEY}")
     job.commit()
+
 
 main()
