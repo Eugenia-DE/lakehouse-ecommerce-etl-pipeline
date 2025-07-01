@@ -28,16 +28,16 @@ def main():
             "org.apache.spark.sql.delta.catalog.DeltaCatalog"
         ) \
         .getOrCreate()
-    glueContext = GlueContext(sc)
-    job = Job(glueContext)
+    glue_context = GlueContext(sc)
+    job = Job(glue_context)
     job.init(JOB_NAME, args)
 
     bucket = "ecommerce-lakehouse-project"
-    RAW_PATH = f"s3://{bucket}/{RAW_KEY}"
-    PROCESSED_PATH = f"s3://{bucket}/processed/{DATASET}/"
-    REJECTED_PATH = f"{PROCESSED_PATH}/rejected_records/"
-    DATABASE_NAME = "ecommerce_lakehouse"
-    TABLE_NAME = DATASET
+    raw_path = f"s3://{bucket}/{RAW_KEY}"
+    processed_path = f"s3://{bucket}/processed/{DATASET}/"
+    rejected_path = f"{processed_path}/rejected_records/"
+    database_name = "ecommerce_lakehouse"
+    table_name = DATASET
 
     schema = StructType([
         StructField("product_id", StringType(), True),
@@ -49,7 +49,7 @@ def main():
     df_raw = spark.read.format("csv") \
         .option("header", "true") \
         .schema(schema) \
-        .load(RAW_PATH)
+        .load(raw_path)
 
     required_fields = [
         "product_id", "department_id", "department", "product_name"
@@ -57,17 +57,20 @@ def main():
     df_valid = df_raw.dropna(subset=required_fields)
     df_invalid = df_raw.subtract(df_valid)
 
-    df_clean = df_valid.dropDuplicates(["product_id"]) \
-        .withColumn("ingestion_timestamp", current_timestamp())
+    df_clean = df_valid.dropDuplicates(["product_id"]).withColumn(
+        "ingestion_timestamp", current_timestamp()
+    )
 
     if df_invalid.count() > 0:
-        df_invalid.withColumn("rejection_reason", lit("Missing required fields")) \
-            .write.mode("overwrite") \
-            .option("header", "true") \
-            .csv(REJECTED_PATH)
+        df_invalid.withColumn(
+            "rejection_reason",
+            lit("Missing required fields")
+        ).write.mode("overwrite") \
+         .option("header", "true") \
+         .csv(rejected_path)
 
-    if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
-        DeltaTable.forPath(spark, PROCESSED_PATH) \
+    if DeltaTable.isDeltaTable(spark, processed_path):
+        DeltaTable.forPath(spark, processed_path) \
             .alias("target") \
             .merge(
                 df_clean.alias("source"),
@@ -80,13 +83,13 @@ def main():
         df_clean.write.format("delta") \
             .partitionBy("department") \
             .mode("overwrite") \
-            .save(PROCESSED_PATH)
+            .save(processed_path)
 
-    spark.sql(f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
+    spark.sql(f"CREATE DATABASE IF NOT EXISTS {database_name}")
     spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {DATABASE_NAME}.{TABLE_NAME}
+        CREATE TABLE IF NOT EXISTS {database_name}.{table_name}
         USING DELTA
-        LOCATION '{PROCESSED_PATH}'
+        LOCATION '{processed_path}'
     """)
 
     print(f"Finished processing {RAW_KEY}")
