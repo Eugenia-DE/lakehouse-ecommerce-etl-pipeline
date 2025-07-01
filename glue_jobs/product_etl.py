@@ -10,15 +10,23 @@ from delta import DeltaTable
 
 
 def main():
-    args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key", "dataset_name"])
+    args = getResolvedOptions(
+        sys.argv, ["JOB_NAME", "raw_key", "dataset_name"]
+    )
     RAW_KEY = args["raw_key"]
     DATASET = args["dataset_name"]
     JOB_NAME = args["JOB_NAME"]
 
     sc = SparkContext()
     spark = SparkSession.builder \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+        .config(
+            "spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension"
+        ) \
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        ) \
         .getOrCreate()
     glueContext = GlueContext(sc)
     job = Job(glueContext)
@@ -43,7 +51,9 @@ def main():
         .schema(schema) \
         .load(RAW_PATH)
 
-    required_fields = ["product_id", "department_id", "department", "product_name"]
+    required_fields = [
+        "product_id", "department_id", "department", "product_name"
+    ]
     df_valid = df_raw.dropna(subset=required_fields)
     df_invalid = df_raw.subtract(df_valid)
 
