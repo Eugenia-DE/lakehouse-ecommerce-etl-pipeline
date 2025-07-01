@@ -8,7 +8,10 @@ from awsglue.job import Job
 
 
 def main():
-    args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_keys", "dataset_names"])
+    args = getResolvedOptions(
+        sys.argv,
+        ["JOB_NAME", "raw_keys", "dataset_names"]
+    )
     JOB_NAME = args["JOB_NAME"]
     RAW_KEYS = args["raw_keys"].split(",")
     DATASET_NAMES = args["dataset_names"].split(",")
