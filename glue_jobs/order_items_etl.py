@@ -42,7 +42,9 @@ def main():
         return
 
     try:
-        products_df = spark.read.format("delta").load(f"s3://{BUCKET}/processed/products/")
+        products_df = spark.read.format("delta").load(
+            f"s3://{BUCKET}/processed/products/"
+        )
         valid_product_ids = products_df.select("product_id").distinct()
     except Exception as e:
         print("Failed to load products Delta table:", str(e))
@@ -65,7 +67,9 @@ def main():
             df["date"] = pd.to_datetime(df["order_timestamp"]).dt.date
             df = df[required_columns + ["date"]]
             valid = df.dropna(
-                subset=["id", "order_id", "product_id", "user_id", "order_timestamp"]
+                subset=[
+                    "id", "order_id", "product_id", "user_id", "order_timestamp"
+                ]
             )
             invalid = df[~df.index.isin(valid.index)]
             valid_rows.append(valid)
