@@ -27,13 +27,18 @@ def main():
         copy_source = {"Bucket": BUCKET, "Key": raw_key}
         archive_key = f"archived/{raw_key}"
         log_key = (
-            f"processed/_processed_log/{dataset}/{os.path.basename(raw_key)}.txt"
+            f"processed/_processed_log/{dataset}/"
+            f"{os.path.basename(raw_key)}.txt"
         )
 
         try:
             bucket.copy(copy_source, archive_key)
             s3.Object(BUCKET, raw_key).delete()
-            s3_client.put_object(Bucket=BUCKET, Key=log_key, Body="processed")
+            s3_client.put_object(
+                Bucket=BUCKET,
+                Key=log_key,
+                Body="processed"
+            )
             print(f"Archived {raw_key} and created marker {log_key}")
         except Exception as e:
             print(f"Failed to archive/mark {raw_key}:", str(e))
