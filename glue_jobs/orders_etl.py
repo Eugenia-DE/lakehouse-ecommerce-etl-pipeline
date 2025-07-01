@@ -26,7 +26,8 @@ def main():
     sc = SparkContext()
     glue_context = GlueContext(sc)
     spark = glue_context.spark_session.builder \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+        .config("spark.sql.extensions", 
+                "io.delta.sql.DeltaSparkSessionExtension") \
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog"
@@ -72,7 +73,8 @@ def main():
 
     spark_df = spark_df.dropDuplicates(["order_id"]) \
         .withColumn("ingestion_timestamp", current_timestamp()) \
-        .withColumn("order_timestamp", col("order_timestamp").cast("timestamp")) \
+        .withColumn("order_timestamp", 
+                   col("order_timestamp").cast("timestamp")) \
         .withColumn("date", to_date(col("order_timestamp")))
 
     if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
