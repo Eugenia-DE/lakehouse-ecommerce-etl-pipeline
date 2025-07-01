@@ -25,7 +25,10 @@ def main():
     glueContext = GlueContext(sc)
     spark = glueContext.spark_session.builder \
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        ) \
         .getOrCreate()
     job = Job(glueContext)
     job.init(JOB_NAME, args)
@@ -36,7 +39,8 @@ def main():
     excel_file = pd.ExcelFile(io.BytesIO(excel_bytes))
 
     required_columns = [
-        "order_num", "order_id", "user_id", "order_timestamp", "total_amount"
+        "order_num", "order_id", "user_id",
+        "order_timestamp", "total_amount"
     ]
     valid_rows, invalid_rows = [], []
 
