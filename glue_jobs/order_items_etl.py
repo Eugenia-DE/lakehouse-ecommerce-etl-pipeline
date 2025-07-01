@@ -25,12 +25,18 @@ def main():
     ORDERS_PATH = f"s3://{BUCKET}/processed/orders/"
 
     sc = SparkContext()
-    glueContext = GlueContext(sc)
-    spark = glueContext.spark_session.builder \
-        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
-        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+    glue_context = GlueContext(sc)
+    spark = glue_context.spark_session.builder \
+        .config(
+            "spark.sql.extensions",
+            "io.delta.sql.DeltaSparkSessionExtension"
+        ) \
+        .config(
+            "spark.sql.catalog.spark_catalog",
+            "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+        ) \
         .getOrCreate()
-    job = Job(glueContext)
+    job = Job(glue_context)
     job.init(JOB_NAME, args)
 
     s3 = boto3.client("s3")
@@ -67,7 +73,9 @@ def main():
     for sheet in excel_file.sheet_names:
         try:
             df = excel_file.parse(sheet)
-            df["date"] = pd.to_datetime(df["order_timestamp"]).dt.date
+            df["date"] = pd.to_datetime(
+                df["order_timestamp"]
+            ).dt.date
             df = df[required_columns + ["date"]]
             valid = df.dropna(
                 subset=[
@@ -89,12 +97,14 @@ def main():
     df_valid = pd.concat(valid_rows, ignore_index=True)
     spark_df = spark.createDataFrame(df_valid)
 
-    spark_df = spark_df.join(valid_order_ids, on="order_id", how="leftsemi")
-    spark_df = spark_df.join(valid_product_ids, on="product_id", how="leftsemi")
-    spark_df = spark_df.dropDuplicates(["id"]) \
-        .withColumn("ingestion_timestamp", current_timestamp()) \
-        .withColumn("order_timestamp", col("order_timestamp").cast("timestamp")) \
-        .withColumn("date", to_date(col("order_timestamp")))
+    spark_df = spark_df.join(
+        valid_order_ids, on="order_id", how="leftsemi"
+    ).join(
+        valid_product_ids, on="product_id", how="leftsemi"
+    ).dropDuplicates(["id"]) \
+     .withColumn("ingestion_timestamp", current_timestamp()) \
+     .withColumn("order_timestamp", col("order_timestamp").cast("timestamp")) \
+     .withColumn("date", to_date(col("order_timestamp")))
 
     if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
         DeltaTable.forPath(spark, PROCESSED_PATH) \
