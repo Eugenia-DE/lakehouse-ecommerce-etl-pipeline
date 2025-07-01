@@ -42,6 +42,15 @@ def main():
         print(" Failed to load FK orders table:", str(e))
         job.commit()
         return
+    
+    # Load foreign key (products) data
+    try:
+        products_df = spark.read.format("delta").load(f"s3://{BUCKET}/processed/products/")
+        valid_product_ids = products_df.select("product_id").distinct()
+    except Exception as e:
+        print("Failed to load products Delta table:", str(e))
+        job.commit()
+        return
 
     response = s3.get_object(Bucket=BUCKET, Key=RAW_KEY)
     excel_bytes = response["Body"].read()
@@ -75,6 +84,7 @@ def main():
     spark_df = spark.createDataFrame(df_valid)
 
     spark_df = spark_df.join(valid_order_ids, on="order_id", how="leftsemi")
+    spark_df = spark_df.join(valid_product_ids, on="product_id", how="leftsemi")
     spark_df = spark_df.dropDuplicates(["id"]) \
         .withColumn("ingestion_timestamp", current_timestamp()) \
         .withColumn("order_timestamp", col("order_timestamp").cast("timestamp")) \
