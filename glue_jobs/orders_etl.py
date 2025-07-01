@@ -1,5 +1,4 @@
 import sys
-import os
 import pandas as pd
 import boto3
 import io
@@ -10,6 +9,7 @@ from awsglue.job import Job
 from pyspark.sql.functions import col, current_timestamp, to_date
 from delta import DeltaTable
 
+
 def main():
     args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key", "dataset_name"])
     RAW_KEY = args["raw_key"]
@@ -17,9 +17,7 @@ def main():
     DATASET = args["dataset_name"]
 
     BUCKET = "ecommerce-lakehouse-project"
-    RAW_PATH = f"s3://{BUCKET}/{RAW_KEY}"
     PROCESSED_PATH = f"s3://{BUCKET}/processed/{DATASET}/"
-    REJECTED_PATH = f"{PROCESSED_PATH}/rejected_records/"
     DATABASE_NAME = "ecommerce_lakehouse"
     TABLE_NAME = DATASET
 
@@ -33,12 +31,13 @@ def main():
     job.init(JOB_NAME, args)
 
     s3 = boto3.client("s3")
-
     response = s3.get_object(Bucket=BUCKET, Key=RAW_KEY)
     excel_bytes = response["Body"].read()
     excel_file = pd.ExcelFile(io.BytesIO(excel_bytes))
 
-    required_columns = ["order_num", "order_id", "user_id", "order_timestamp", "total_amount"]
+    required_columns = [
+        "order_num", "order_id", "user_id", "order_timestamp", "total_amount"
+    ]
     valid_rows, invalid_rows = [], []
 
     for sheet in excel_file.sheet_names:
@@ -46,7 +45,9 @@ def main():
             df = excel_file.parse(sheet)
             df["date"] = pd.to_datetime(df["order_timestamp"]).dt.date
             df = df[required_columns + ["date"]]
-            valid = df.dropna(subset=["order_id", "user_id", "order_timestamp"])
+            valid = df.dropna(
+                subset=["order_id", "user_id", "order_timestamp"]
+            )
             invalid = df[~df.index.isin(valid.index)]
             valid_rows.append(valid)
             invalid_rows.append(invalid)
@@ -54,14 +55,13 @@ def main():
             print(f"Skipping sheet {sheet} due to: {e}")
 
     if not valid_rows:
-        print(" No valid data to process.")
+        print("No valid data to process.")
         job.commit()
         return
 
     df_valid = pd.concat(valid_rows, ignore_index=True)
-    df_invalid = pd.concat(invalid_rows, ignore_index=True)
-
     spark_df = spark.createDataFrame(df_valid)
+
     spark_df = spark_df.dropDuplicates(["order_id"]) \
         .withColumn("ingestion_timestamp", current_timestamp()) \
         .withColumn("order_timestamp", col("order_timestamp").cast("timestamp")) \
@@ -70,7 +70,10 @@ def main():
     if DeltaTable.isDeltaTable(spark, PROCESSED_PATH):
         DeltaTable.forPath(spark, PROCESSED_PATH) \
             .alias("target") \
-            .merge(spark_df.alias("source"), "target.order_id = source.order_id") \
+            .merge(
+                spark_df.alias("source"),
+                "target.order_id = source.order_id"
+            ) \
             .whenMatchedUpdateAll() \
             .whenNotMatchedInsertAll() \
             .execute()
@@ -87,7 +90,8 @@ def main():
         LOCATION '{PROCESSED_PATH}'
     """)
 
-    print(f" Finished processing {RAW_KEY}")
+    print(f"Finished processing {RAW_KEY}")
     job.commit()
+
 
 main()
