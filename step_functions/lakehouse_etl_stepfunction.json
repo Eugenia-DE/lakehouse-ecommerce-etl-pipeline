@@ -49,9 +49,7 @@
       "Next": "Check Orders Marker",
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -59,9 +57,7 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
@@ -108,9 +104,7 @@
       "Next": "Check Order Items Marker",
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -118,9 +112,7 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
@@ -167,9 +159,7 @@
       "Next": "Run Glue Crawler",
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -177,9 +167,7 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
@@ -191,12 +179,10 @@
         "FunctionName": "start-glue-crawler-lakehouse",
         "Payload": {}
       },
-      "Next": "Run Athena Validation",
+      "Next": "Wait For Crawler",
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 3,
           "BackoffRate": 2
@@ -204,12 +190,15 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
+    },
+    "Wait For Crawler": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Run Athena Validation"
     },
     "Run Athena Validation": {
       "Type": "Task",
@@ -226,9 +215,7 @@
       "Next": "Archive and Mark Files",
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
@@ -248,9 +235,7 @@
       "End": true,
       "Retry": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -258,9 +243,7 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": [
-            "States.ALL"
-          ],
+          "ErrorEquals": ["States.ALL"],
           "Next": "Send Failure Notification"
         }
       ]
