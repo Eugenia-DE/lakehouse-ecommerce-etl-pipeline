@@ -26,10 +26,7 @@ def main():
     sc = SparkContext()
     glue_context = GlueContext(sc)
     spark = glue_context.spark_session.builder \
-        .config(
-            "spark.sql.extensions",
-            "io.delta.sql.DeltaSparkSessionExtension"
-        ) \
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
         .config(
             "spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog"
@@ -96,8 +93,9 @@ def main():
 
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
     spark.sql(
-        f"CREATE TABLE IF NOT EXISTS {DATABASE_NAME}.{TABLE_NAME} "
-        f"USING DELTA LOCATION '{PROCESSED_PATH}'"
+        "CREATE TABLE IF NOT EXISTS "
+        f"{DATABASE_NAME}.{TABLE_NAME} USING DELTA LOCATION "
+        f"'{PROCESSED_PATH}'"
     )
 
     print(f"Finished processing {RAW_KEY}")
