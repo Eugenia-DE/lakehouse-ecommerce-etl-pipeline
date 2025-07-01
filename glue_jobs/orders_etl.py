@@ -11,7 +11,9 @@ from delta import DeltaTable
 
 
 def main():
-    args = getResolvedOptions(sys.argv, ["JOB_NAME", "raw_key", "dataset_name"])
+    args = getResolvedOptions(
+        sys.argv, ["JOB_NAME", "raw_key", "dataset_name"]
+    )
     RAW_KEY = args["raw_key"]
     JOB_NAME = args["JOB_NAME"]
     DATASET = args["dataset_name"]
