@@ -101,7 +101,9 @@ def main():
         LOCATION '{PROCESSED_PATH}'
     """)
 
-    print(f"Finished processing {RAW_KEY}")
+    print(
+        f"Finished processing {RAW_KEY}"
+    )
     job.commit()
 
 
