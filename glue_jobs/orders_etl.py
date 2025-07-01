@@ -95,15 +95,12 @@ def main():
             .save(PROCESSED_PATH)
 
     spark.sql(f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
-    spark.sql(f"""
-        CREATE TABLE IF NOT EXISTS {DATABASE_NAME}.{TABLE_NAME}
-        USING DELTA
-        LOCATION '{PROCESSED_PATH}'
-    """)
-
-    print(
-        f"Finished processing {RAW_KEY}"
+    spark.sql(
+        f"CREATE TABLE IF NOT EXISTS {DATABASE_NAME}.{TABLE_NAME} "
+        f"USING DELTA LOCATION '{PROCESSED_PATH}'"
     )
+
+    print(f"Finished processing {RAW_KEY}")
     job.commit()
 
 
