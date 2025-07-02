@@ -1,0 +1,26 @@
+name: Lakehouse CI - Dev Branch
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  validate-scripts:
+    runs-on: ubuntu-latest
+    name: Lint Python Scripts
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install flake8 linter
+        run: pip install flake8
+
+      - name: Run flake8 linting
+        run: flake8 glue_jobs/

@@ -1,0 +1,284 @@
+{
+  "Comment": "Lakehouse Pipeline with Delta Glue Jobs, Marker Checks, Crawler, Athena Validation, and Final Archival",
+  "StartAt": "Check Products Marker",
+  "States": {
+    "Check Products Marker": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "lakehouse-check-processed-marker",
+        "Payload": {
+          "dataset": "products",
+          "filename": "products.csv"
+        }
+      },
+      "ResultSelector": {
+        "already_processed.$": "$.Payload.already_processed"
+      },
+      "Next": "Products Already Processed?"
+    },
+    "Products Already Processed?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.already_processed",
+          "BooleanEquals": true,
+          "Next": "Check Orders Marker"
+        }
+      ],
+      "Default": "Run Products ETL"
+    },
+    "Run Products ETL": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "product_etl",
+        "Arguments": {
+          "--raw_key": "raw/products/products.csv",
+          "--dataset_name": "products",
+          "--additional-python-modules": "delta-spark",
+          "--enable-glue-datacatalog": "true",
+          "--datalake-formats": "delta"
+        }
+      },
+      "Next": "Check Orders Marker",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Send Failure Notification"
+        }
+      ]
+    },
+    "Check Orders Marker": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "lakehouse-check-processed-marker",
+        "Payload": {
+          "dataset": "orders",
+          "filename": "orders_apr_2025.xlsx"
+        }
+      },
+      "ResultSelector": {
+        "already_processed.$": "$.Payload.already_processed"
+      },
+      "Next": "Orders Already Processed?"
+    },
+    "Orders Already Processed?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.already_processed",
+          "BooleanEquals": true,
+          "Next": "Check Order Items Marker"
+        }
+      ],
+      "Default": "Run Orders ETL"
+    },
+    "Run Orders ETL": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "orders_etl",
+        "Arguments": {
+          "--raw_key": "raw/orders/orders_apr_2025.xlsx",
+          "--dataset_name": "orders",
+          "--additional-python-modules": "delta-spark,pandas,openpyxl",
+          "--enable-glue-datacatalog": "true",
+          "--datalake-formats": "delta"
+        }
+      },
+      "Next": "Check Order Items Marker",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Send Failure Notification"
+        }
+      ]
+    },
+    "Check Order Items Marker": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "lakehouse-check-processed-marker",
+        "Payload": {
+          "dataset": "order_items",
+          "filename": "order_items_apr_2025.xlsx"
+        }
+      },
+      "ResultSelector": {
+        "already_processed.$": "$.Payload.already_processed"
+      },
+      "Next": "Order Items Already Processed?"
+    },
+    "Order Items Already Processed?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.already_processed",
+          "BooleanEquals": true,
+          "Next": "Run Glue Crawler"
+        }
+      ],
+      "Default": "Run Order Items ETL"
+    },
+    "Run Order Items ETL": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "order_items_etl",
+        "Arguments": {
+          "--raw_key": "raw/order_items/order_items_apr_2025.xlsx",
+          "--dataset_name": "order_items",
+          "--additional-python-modules": "delta-spark,pandas,openpyxl",
+          "--enable-glue-datacatalog": "true",
+          "--datalake-formats": "delta"
+        }
+      },
+      "Next": "Run Glue Crawler",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Send Failure Notification"
+        }
+      ]
+    },
+    "Run Glue Crawler": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "start-glue-crawler-lakehouse",
+        "Payload": {}
+      },
+      "Next": "Wait For Crawler",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Send Failure Notification"
+        }
+      ]
+    },
+    "Wait For Crawler": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Run Athena Validation"
+    },
+    "Run Athena Validation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::athena:startQueryExecution.sync",
+      "Parameters": {
+        "QueryString": "SELECT COUNT(*) FROM ecommerce_lakehouse.products",
+        "QueryExecutionContext": {
+          "Database": "ecommerce_lakehouse"
+        },
+        "ResultConfiguration": {
+          "OutputLocation": "s3://ecommerce-lakehouse-project/athena-query-results/"
+        }
+      },
+      "Next": "Archive and Mark Files",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Send Failure Notification"
+        }
+      ]
+    },
+    "Archive and Mark Files": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "archive_and_mark_processed",
+        "Arguments": {
+          "--raw_keys": "raw/products/products.csv,raw/orders/orders_apr_2025.xlsx,raw/order_items/order_items_apr_2025.xlsx",
+          "--dataset_names": "products,orders,order_items",
+          "--additional-python-modules": "boto3",
+          "--enable-glue-datacatalog": "true"
+        }
+      },
+      "End": true,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 10,
+          "MaxAttempts": 2,
+          "BackoffRate": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "Next": "Send Failure Notification"
+        }
+      ]
+    },
+    "Send Failure Notification": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn": "arn:aws:sns:eu-west-1:371439860588:ecommerce-pipeline-alerts",
+        "Message": "Lakehouse ETL Pipeline failed. Check Step Functions for details.",
+        "Subject": "🚨 Lakehouse ETL Failure"
+      },
+      "Next": "FailState"
+    },
+    "FailState": {
+      "Type": "Fail",
+      "Error": "ETLPipelineFailed",
+      "Cause": "One of the ETL steps failed after retries."
+    }
+  }
+}
