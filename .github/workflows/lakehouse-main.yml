@@ -44,4 +44,4 @@ jobs:
         run: |
           aws stepfunctions update-state-machine \
             --state-machine-arn arn:aws:states:eu-west-1:371439860588:stateMachine:EcommerceLakehouseOrchestration \
-            --definition file://lakehouse_etl_stepfunction.json
+            --definition file://step_functions/lakehouse_etl_stepfunction.json
