@@ -33,7 +33,12 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Validate Python Syntax
-        run: python -m py_compile product_etl.py orders_etl.py order_items_etl.py archive_and_mark_processed.py
+        run: |
+          python -m py_compile \
+            glue_jobs/product_etl.py \
+            glue_jobs/orders_etl.py \
+            glue_jobs/order_items_etl.py \
+            glue_jobs/archive_and_mark_processed.py
 
       - name: Deploy Step Function Definition
         run: |
