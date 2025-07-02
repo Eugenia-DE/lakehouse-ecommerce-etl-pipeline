@@ -1,12 +1,7 @@
 {
   "Comment": "Lakehouse Pipeline with Delta Glue Jobs, Marker Checks, Crawler, Athena Validation, and Final Archival",
-  "StartAt": "Simulate File Detection",
+  "StartAt": "Check Products Marker",
   "States": {
-    "Simulate File Detection": {
-      "Type": "Pass",
-      "Result": "New file detected (simulated)",
-      "Next": "Check Products Marker"
-    },
     "Check Products Marker": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
@@ -49,7 +44,9 @@
       "Next": "Check Orders Marker",
       "Retry": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -57,7 +54,9 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "Next": "Send Failure Notification"
         }
       ]
@@ -104,7 +103,9 @@
       "Next": "Check Order Items Marker",
       "Retry": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -112,7 +113,9 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "Next": "Send Failure Notification"
         }
       ]
@@ -159,7 +162,9 @@
       "Next": "Run Glue Crawler",
       "Retry": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -167,7 +172,9 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "Next": "Send Failure Notification"
         }
       ]
@@ -182,7 +189,9 @@
       "Next": "Wait For Crawler",
       "Retry": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "IntervalSeconds": 10,
           "MaxAttempts": 3,
           "BackoffRate": 2
@@ -190,7 +199,9 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "Next": "Send Failure Notification"
         }
       ]
@@ -215,7 +226,9 @@
       "Next": "Archive and Mark Files",
       "Catch": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "Next": "Send Failure Notification"
         }
       ]
@@ -235,7 +248,9 @@
       "End": true,
       "Retry": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "IntervalSeconds": 10,
           "MaxAttempts": 2,
           "BackoffRate": 2
@@ -243,7 +258,9 @@
       ],
       "Catch": [
         {
-          "ErrorEquals": ["States.ALL"],
+          "ErrorEquals": [
+            "States.ALL"
+          ],
           "Next": "Send Failure Notification"
         }
       ]
